@@ -1,0 +1,3 @@
+Flask==2.2.5
+# You may add gunicorn for production usage:
+gunicorn==21.2.0
