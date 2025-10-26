@@ -1,13 +1,13 @@
-// Define a variable for the Docker image name
+// Define variables outside the pipeline block for easy management
 def DOCKER_IMAGE_REPO = "local/flask-app"
+// NOTE: We do not need REGISTRY_CREDENTIAL_ID or DOCKER_PASSWORD since we are skipping the push stage.
 
 pipeline {
     // Run the pipeline on any available agent (Jenkins node)
     agent any
 
-    // Configuration for automatic build trigger upon Git push
     triggers {
-        // This is necessary to enable the GitHub webhook trigger setup in Jenkins UI
+        // This enables the GitHub webhook trigger setup in Jenkins UI
         githubPush() 
     }
 
@@ -20,7 +20,7 @@ pipeline {
     stages {
         stage('Clone Repository') {
             steps {
-                // SCM is typically checked out automatically by the Jenkins SCM configuration
+                // SCM is automatically checked out by job configuration
                 echo "Source code checked out successfully."
             }
         }
@@ -29,8 +29,8 @@ pipeline {
             steps {
                 script {
                     echo "Building image: ${DOCKER_IMAGE_REPO}:${DOCKER_IMAGE_TAG}"
-                    // Build and tag with both the specific build number and 'latest'
-                    sh "docker build -t ${DOCKER_IMAGE_REPO}:${DOCKER_IMAGE_TAG} -t ${DOCKER_IMAGE_REPO}:latest ."
+                    // *** CRITICAL FIX: Changed 'sh' to 'bat' for Windows execution ***
+                    bat "docker build -t ${DOCKER_IMAGE_REPO}:${DOCKER_IMAGE_TAG} -t ${DOCKER_IMAGE_REPO}:latest ."
                 }
             }
         }
@@ -42,14 +42,15 @@ pipeline {
             // Clean up the local workspace directory
             cleanWs()
             
-            // Clean up the local image (optional, but good practice if you don't need it locally)
+            // Attempt to remove the built image locally after a successful push
             script {
                 try {
                     echo "Cleaning up local Docker images..."
-                    sh "docker rmi ${DOCKER_IMAGE_REPO}:${DOCKER_IMAGE_TAG}"
-                    sh "docker rmi ${DOCKER_IMAGE_REPO}:latest"
+                    // *** CRITICAL FIX: Changed 'sh' to 'bat' for Windows execution ***
+                    bat "docker rmi ${DOCKER_IMAGE_REPO}:${DOCKER_IMAGE_TAG}"
+                    bat "docker rmi ${DOCKER_IMAGE_REPO}:latest"
                 } catch (err) {
-                    echo "Image removal failed (might be in use or already removed): ${err}"
+                    echo "Image removal failed (might not be installed or already removed): ${err}"
                 }
             }
         }
