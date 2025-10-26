@@ -1,6 +1,5 @@
 // Define variables outside the pipeline block for easy management
 def DOCKER_IMAGE_REPO = "local/flask-app"
-// NOTE: We do not need REGISTRY_CREDENTIAL_ID or DOCKER_PASSWORD since we are skipping the push stage.
 
 pipeline {
     // Run the pipeline on any available agent (Jenkins node)
@@ -20,7 +19,6 @@ pipeline {
     stages {
         stage('Clone Repository') {
             steps {
-                // SCM is automatically checked out by job configuration
                 echo "Source code checked out successfully."
             }
         }
@@ -29,30 +27,33 @@ pipeline {
             steps {
                 script {
                     echo "Building image: ${DOCKER_IMAGE_REPO}:${DOCKER_IMAGE_TAG}"
-                    // *** CRITICAL FIX: Changed 'sh' to 'bat' for Windows execution ***
+                    // Using 'bat' for Windows execution
                     bat "docker build -t ${DOCKER_IMAGE_REPO}:${DOCKER_IMAGE_TAG} -t ${DOCKER_IMAGE_REPO}:latest ."
                 }
             }
         }
     }
     
-    // Post-build actions for cleanup
+    // The 'post' section is modified to skip deleting the Docker image tags.
     post {
         always {
             // Clean up the local workspace directory
             cleanWs()
             
-            // Attempt to remove the built image locally after a successful push
+            /*
+            // The image cleanup commands are commented out here 
+            // so you can run the built image locally for testing.
+            
             script {
                 try {
                     echo "Cleaning up local Docker images..."
-                    // *** CRITICAL FIX: Changed 'sh' to 'bat' for Windows execution ***
                     bat "docker rmi ${DOCKER_IMAGE_REPO}:${DOCKER_IMAGE_TAG}"
                     bat "docker rmi ${DOCKER_IMAGE_REPO}:latest"
                 } catch (err) {
                     echo "Image removal failed (might not be installed or already removed): ${err}"
                 }
             }
+            */
         }
     }
 }
